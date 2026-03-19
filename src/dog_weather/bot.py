@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+from datetime import datetime
 from typing import Optional
+
+import pytz
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import (
@@ -30,6 +34,7 @@ from dog_weather.scheduler import (
 )
 from dog_weather.utils.timezone import get_timezone
 from dog_weather.weather.base import WeatherProvider
+from dog_weather.weather.consensus import build_consensus_message
 
 logger = logging.getLogger(__name__)
 
@@ -350,32 +355,42 @@ async def handle_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     user = await db.get_user(update.effective_user.id)
-    kb = _main_menu()
-    logger.info("CMD_SETTINGS: sending reply_markup=%s", kb.to_dict())
-    msg = await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=kb)
-    logger.info("CMD_SETTINGS: message sent, id=%s", msg.message_id)
+    await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=_main_menu())
     return ConversationHandler.END
 
 
 @_safe_handler
-async def cmd_forecast_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("CMD_FORECAST_NOW: called by user %s", update.effective_user.id)
+async def cmd_weather_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     providers: list[WeatherProvider] = context.bot_data["providers"]
     user = await db.get_user(update.effective_user.id)
-    logger.info("CMD_FORECAST_NOW: user=%s configured=%s", user, user.is_fully_configured() if user else False)
 
     if not user or not user.is_fully_configured():
         await update.message.reply_text("❌ Сначала настрой бота с помощью /start.")
         return
 
-    kb = _main_menu()
-    logger.info("CMD_FORECAST_NOW: keyboard=%s", kb.to_dict())
-    msg = await update.message.reply_text("⏳ Запрашиваю погоду...", reply_markup=kb)
-    logger.info("CMD_FORECAST_NOW: sent message_id=%s", msg.message_id)
+    await update.message.reply_text("⏳ Запрашиваю текущую погоду...", reply_markup=_main_menu())
 
-    await trigger_now(update.effective_user.id, context.bot, db, providers)
-    logger.info("CMD_FORECAST_NOW: done")
+    tz = pytz.timezone(user.timezone)
+    now = datetime.now(tz)
+    hours = [now.hour]
+
+    tasks = [p.get_hourly(user.latitude, user.longitude, hours, now.date(), user.timezone) for p in providers]
+    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    provider_results, failed = {}, []
+    for provider, result in zip(providers, raw_results):
+        if isinstance(result, Exception) or not result:
+            failed.append(provider.name)
+        else:
+            provider_results[provider.name] = result
+
+    if not provider_results:
+        await update.message.reply_text("⚠️ Все провайдеры погоды недоступны.")
+        return
+
+    message = build_consensus_message(hours, provider_results, now.date(), failed)
+    await update.message.reply_text(message, parse_mode="HTML")
 
 
 @_safe_handler
@@ -421,7 +436,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def _main_menu() -> ReplyKeyboardMarkup:
     kb = [
-        [KeyboardButton("🌤 Прогноз"), KeyboardButton("⚙️ Настройки")],
+        [KeyboardButton("🌤 Прогноз"), KeyboardButton("⛅ Погода сейчас"), KeyboardButton("⚙️ Настройки")],
         [KeyboardButton("🕐 Время"), KeyboardButton("📊 Интервалы"), KeyboardButton("📍 Локация")],
     ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True, is_persistent=True)
@@ -498,35 +513,39 @@ def create_application(
             CommandHandler("intervals", cmd_intervals),
             CommandHandler("settings", cmd_settings),
             CommandHandler("forecast", cmd_forecast),
+            CommandHandler("weather_now", cmd_weather_now),
             MessageHandler(filters.Regex(r"^📍 Локация$"), cmd_location),
             MessageHandler(filters.Regex(r"^🕐 Время$"), cmd_time),
             MessageHandler(filters.Regex(r"^📊 Интервалы$"), cmd_intervals),
             MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings),
             MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast),
+            MessageHandler(filters.Regex(r"^⛅ Погода сейчас$"), cmd_weather_now),
         ],
         states={
             AWAITING_LOCATION: [
                 MessageHandler(filters.LOCATION, handle_location),
                 MessageHandler(
-                    filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"),
+                    filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⛅ Погода сейчас|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"),
                     lambda u, c: u.message.reply_text(
                         "Используй кнопку ниже для отправки местоположения."
                     ),
                 ),
             ],
             AWAITING_TIME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_time),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⛅ Погода сейчас|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_time),
             ],
             AWAITING_INTERVALS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_intervals),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⛅ Погода сейчас|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_intervals),
             ],
         },
         fallbacks=[
             CommandHandler("cancel", cmd_cancel),
             CommandHandler("settings", cmd_settings),
             CommandHandler("forecast", cmd_forecast),
+            CommandHandler("weather_now", cmd_weather_now),
             MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings),
             MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast),
+            MessageHandler(filters.Regex(r"^⛅ Погода сейчас$"), cmd_weather_now),
         ],
         allow_reentry=True,
         per_user=True,
@@ -536,9 +555,10 @@ def create_application(
     app.add_handler(conv)
     app.add_handler(CommandHandler("settings", cmd_settings))
     app.add_handler(CommandHandler("forecast", cmd_forecast))
-    app.add_handler(CommandHandler("forecast_now", cmd_forecast_now), group=1)
+    app.add_handler(CommandHandler("weather_now", cmd_weather_now))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast))
+    app.add_handler(MessageHandler(filters.Regex(r"^⛅ Погода сейчас$"), cmd_weather_now))
     app.add_handler(MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings))
 
     return app
