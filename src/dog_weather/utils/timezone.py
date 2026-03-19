@@ -2,17 +2,11 @@ from __future__ import annotations
 
 import logging
 
+from timezonefinder import TimezoneFinder
+
 logger = logging.getLogger(__name__)
 
-_finder = None
-
-
-def _get_finder():
-    global _finder
-    if _finder is None:
-        from timezonefinder import TimezoneFinder
-        _finder = TimezoneFinder()
-    return _finder
+_finder = TimezoneFinder()
 
 
 def get_timezone(lat: float, lon: float) -> str:
@@ -21,8 +15,7 @@ def get_timezone(lat: float, lon: float) -> str:
     Falls back to "UTC" when no timezone can be determined.
     """
     try:
-        tf = _get_finder()
-        tz = tf.timezone_at(lat=lat, lng=lon)
+        tz = _finder.timezone_at(lat=lat, lng=lon)
         if tz:
             return tz
         logger.warning("timezonefinder returned None for (%s, %s), using UTC", lat, lon)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 
+from dog_weather.bot import create_application
 from dog_weather.config import load_config
 from dog_weather.database import Database
 from dog_weather.weather.metno import MetNoProvider
@@ -50,8 +51,6 @@ def main() -> None:
         len(providers),
         ", ".join(p.name for p in providers),
     )
-
-    from dog_weather.bot import create_application
 
     app = create_application(config, db, providers)
     app.run_polling(drop_pending_updates=True)

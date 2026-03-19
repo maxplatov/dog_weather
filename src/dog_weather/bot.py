@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import (
     KeyboardButton,
     ReplyKeyboardMarkup,
@@ -412,8 +413,6 @@ def create_application(
     db: Database,
     providers: list[WeatherProvider],
 ) -> Application:
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
     async def post_init(app: Application) -> None:
         await db.init()
 
