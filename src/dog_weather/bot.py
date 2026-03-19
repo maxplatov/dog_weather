@@ -358,6 +358,27 @@ async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @_safe_handler
+async def cmd_forecast_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("CMD_FORECAST_NOW: called by user %s", update.effective_user.id)
+    db: Database = context.bot_data["db"]
+    providers: list[WeatherProvider] = context.bot_data["providers"]
+    user = await db.get_user(update.effective_user.id)
+    logger.info("CMD_FORECAST_NOW: user=%s configured=%s", user, user.is_fully_configured() if user else False)
+
+    if not user or not user.is_fully_configured():
+        await update.message.reply_text("❌ Сначала настрой бота с помощью /start.")
+        return
+
+    kb = _main_menu()
+    logger.info("CMD_FORECAST_NOW: keyboard=%s", kb.to_dict())
+    msg = await update.message.reply_text("⏳ Запрашиваю погоду...", reply_markup=kb)
+    logger.info("CMD_FORECAST_NOW: sent message_id=%s", msg.message_id)
+
+    await trigger_now(update.effective_user.id, context.bot, db, providers)
+    logger.info("CMD_FORECAST_NOW: done")
+
+
+@_safe_handler
 async def cmd_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     providers: list[WeatherProvider] = context.bot_data["providers"]
@@ -515,6 +536,7 @@ def create_application(
     app.add_handler(conv)
     app.add_handler(CommandHandler("settings", cmd_settings))
     app.add_handler(CommandHandler("forecast", cmd_forecast))
+    app.add_handler(CommandHandler("forecast_now", cmd_forecast_now))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast))
     app.add_handler(MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings))
