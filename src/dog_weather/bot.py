@@ -400,7 +400,7 @@ def _main_menu() -> ReplyKeyboardMarkup:
         [KeyboardButton("🌤 Прогноз"), KeyboardButton("⚙️ Настройки")],
         [KeyboardButton("🕐 Время"), KeyboardButton("📊 Интервалы"), KeyboardButton("📍 Локация")],
     ]
-    return ReplyKeyboardMarkup(kb, resize_keyboard=True, is_persistent=True)
+    return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
 
 # ---------------------------------------------------------------------------
