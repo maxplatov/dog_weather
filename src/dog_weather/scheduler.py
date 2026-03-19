@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -102,11 +102,17 @@ async def _send_forecast(
             return
 
         tz = pytz.timezone(user.timezone)
-        today = datetime.now(tz).date()
+        now = datetime.now(tz)
+        # If all requested intervals have already passed target_date, show tomorrow's forecast
+        target_date = (
+            now.date() + timedelta(days=1)
+            if all(h < now.hour for h in user.intervals)
+            else now.date()
+        )
 
         # Fetch from all providers concurrently; never let one crash the job
         tasks = [
-            p.get_hourly(user.latitude, user.longitude, user.intervals, today, user.timezone)
+            p.get_hourly(user.latitude, user.longitude, user.intervals, target_date, user.timezone)
             for p in providers
         ]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -126,7 +132,7 @@ async def _send_forecast(
             await _safe_send(bot, telegram_id, "⚠️ Все провайдеры погоды недоступны, попробую позже.")
             return
 
-        message = build_consensus_message(user.intervals, provider_results, today, failed_providers)
+        message = build_consensus_message(user.intervals, provider_results, target_date, failed_providers)
         await _safe_send(bot, telegram_id, message, parse_mode="HTML")
 
     except Exception as exc:
