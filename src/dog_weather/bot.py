@@ -416,6 +416,14 @@ def create_application(
     async def post_init(app: Application) -> None:
         await db.init()
 
+        await app.bot.set_my_commands([
+            ("forecast",  "Прогноз сейчас"),
+            ("settings",  "Мои настройки"),
+            ("time",      "Изменить время уведомлений"),
+            ("intervals", "Изменить интервалы"),
+            ("location",  "Изменить локацию"),
+        ])
+
         scheduler = create_scheduler()
         app.bot_data["scheduler"] = scheduler
         app.bot_data["db"] = db
