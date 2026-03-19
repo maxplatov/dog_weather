@@ -366,7 +366,7 @@ async def cmd_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    await update.message.reply_text("⏳ Запрашиваю погоду...")
+    await update.message.reply_text("⏳ Запрашиваю погоду...", reply_markup=_main_menu())
     await trigger_now(
         update.effective_user.id,
         context.bot,
