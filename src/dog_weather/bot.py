@@ -258,7 +258,7 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await db.get_user(tg_user.id)
         if user and user.is_fully_configured():
             _reschedule(context, user)
-            await update.message.reply_text("🔄 Расписание обновлено.")
+            await update.message.reply_text("🔄 Расписание обновлено.", reply_markup=_main_menu())
             return ConversationHandler.END
 
     # Continue onboarding: ask for notification time
@@ -299,7 +299,7 @@ async def handle_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await db.get_user(tg_user.id)
         if user and user.is_fully_configured():
             _reschedule(context, user)
-            await update.message.reply_text("🔄 Расписание обновлено.")
+            await update.message.reply_text("🔄 Расписание обновлено.", reply_markup=_main_menu())
             return ConversationHandler.END
 
     # Ask for intervals
