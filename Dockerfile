@@ -10,7 +10,7 @@ COPY pyproject.toml .
 COPY src/ src/
 
 # Install dependencies into a venv inside /app
-RUN uv sync --no-dev
+RUN uv sync --no-dev --reinstall-package dog-weather
 
 # Data directory (override with a volume in docker-compose)
 RUN mkdir -p /data
