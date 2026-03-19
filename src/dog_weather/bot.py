@@ -351,6 +351,7 @@ async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     user = await db.get_user(update.effective_user.id)
     await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=_main_menu())
+    return ConversationHandler.END
 
 
 @_safe_handler
@@ -492,7 +493,13 @@ def create_application(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_intervals),
             ],
         },
-        fallbacks=[CommandHandler("cancel", cmd_cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cmd_cancel),
+            CommandHandler("settings", cmd_settings),
+            CommandHandler("forecast", cmd_forecast),
+            MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings),
+            MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast),
+        ],
         allow_reentry=True,
         per_user=True,
         per_chat=True,
