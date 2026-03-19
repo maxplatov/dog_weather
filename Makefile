@@ -6,7 +6,7 @@ build:
 up:
 	@mkdir -p data
 	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example — fill in your tokens!")
-	DOCKER_CONFIG=$(PWD)/docker_config docker compose up -d
+	DOCKER_BUILDKIT=0 DOCKER_CONFIG=$(PWD)/docker_config docker compose up -d
 
 down:
 	docker compose down
