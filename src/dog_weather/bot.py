@@ -536,7 +536,7 @@ def create_application(
     app.add_handler(conv)
     app.add_handler(CommandHandler("settings", cmd_settings))
     app.add_handler(CommandHandler("forecast", cmd_forecast))
-    app.add_handler(CommandHandler("forecast_now", cmd_forecast_now))
+    app.add_handler(CommandHandler("forecast_now", cmd_forecast_now), group=1)
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast))
     app.add_handler(MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings))
