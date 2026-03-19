@@ -21,6 +21,7 @@ def build_consensus_message(
     hours: list[int],
     provider_results: dict[str, list[HourlyWeather]],
     target_date: date,
+    failed_providers: list[str] | None = None,
 ) -> str:
     """Aggregate provider results and format a Russian-language forecast message."""
     date_str = f"{target_date.day} {_MONTHS_RU[target_date.month]} {target_date.year}"
@@ -68,6 +69,8 @@ def build_consensus_message(
     if not any("🌡" in l for l in lines):
         return "⚠️ Не удалось получить данные о погоде ни от одного из провайдеров."
 
-    provider_names = ", ".join(provider_results.keys())
-    lines.append(f"📊 <i>Источники: {provider_names}</i>")
+    parts = [", ".join(provider_results.keys())]
+    if failed_providers:
+        parts.append(f"⚠️ недоступны: {', '.join(failed_providers)}")
+    lines.append(f"📊 <i>Источники: {' | '.join(parts)}</i>")
     return "\n".join(lines)

@@ -112,17 +112,21 @@ async def _send_forecast(
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         provider_results: dict[str, list] = {}
+        failed_providers: list[str] = []
         for provider, result in zip(providers, raw_results):
             if isinstance(result, Exception):
                 logger.warning("[%s] raised exception: %s", provider.name, result)
+                failed_providers.append(provider.name)
             elif result:
                 provider_results[provider.name] = result
+            else:
+                failed_providers.append(provider.name)
 
         if not provider_results:
             await _safe_send(bot, telegram_id, "⚠️ Все провайдеры погоды недоступны, попробую позже.")
             return
 
-        message = build_consensus_message(user.intervals, provider_results, today)
+        message = build_consensus_message(user.intervals, provider_results, today, failed_providers)
         await _safe_send(bot, telegram_id, message, parse_mode="HTML")
 
     except Exception as exc:
