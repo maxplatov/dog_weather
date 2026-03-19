@@ -6,6 +6,7 @@ build:
 up:
 	@mkdir -p data
 	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example — fill in your tokens!")
+	@mkdir -p ~/.docker && test -f ~/.docker/config.json || echo '{"credsStore":""}' > ~/.docker/config.json
 	docker compose up -d
 
 down:
