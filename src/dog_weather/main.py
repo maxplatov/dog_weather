@@ -12,11 +12,13 @@ from dog_weather.weather.openweather import OpenWeatherProvider
 from dog_weather.weather.weatherapi import WeatherAPIProvider
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     stream=sys.stdout,
 )
-logging.getLogger("httpx").setLevel(logging.DEBUG)
+# Silence noisy loggers, keep httpx at DEBUG to see request bodies
+for _noisy in ("apscheduler", "telegram", "httpcore", "urllib3"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
