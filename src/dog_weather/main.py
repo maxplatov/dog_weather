@@ -15,6 +15,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     stream=sys.stdout,
+    force=True,
 )
 # Silence noisy loggers, keep httpx at DEBUG to see request bodies
 for _noisy in ("apscheduler", "telegram", "httpcore", "urllib3"):
