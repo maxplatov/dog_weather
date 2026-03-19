@@ -350,7 +350,10 @@ async def handle_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     user = await db.get_user(update.effective_user.id)
-    await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=_main_menu())
+    kb = _main_menu()
+    logger.info("CMD_SETTINGS: sending reply_markup=%s", kb.to_dict())
+    msg = await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=kb)
+    logger.info("CMD_SETTINGS: message sent, id=%s", msg.message_id)
     return ConversationHandler.END
 
 
