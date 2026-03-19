@@ -350,7 +350,6 @@ async def handle_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     user = await db.get_user(update.effective_user.id)
-    await update.message.reply_text("\u200b", reply_markup=ReplyKeyboardRemove())
     await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=_main_menu())
     return ConversationHandler.END
 
@@ -473,9 +472,13 @@ def create_application(
             CommandHandler("location", cmd_location),
             CommandHandler("time", cmd_time),
             CommandHandler("intervals", cmd_intervals),
+            CommandHandler("settings", cmd_settings),
+            CommandHandler("forecast", cmd_forecast),
             MessageHandler(filters.Regex(r"^📍 Локация$"), cmd_location),
             MessageHandler(filters.Regex(r"^🕐 Время$"), cmd_time),
             MessageHandler(filters.Regex(r"^📊 Интервалы$"), cmd_intervals),
+            MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings),
+            MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast),
         ],
         states={
             AWAITING_LOCATION: [
