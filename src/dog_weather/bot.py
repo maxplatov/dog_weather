@@ -484,17 +484,17 @@ def create_application(
             AWAITING_LOCATION: [
                 MessageHandler(filters.LOCATION, handle_location),
                 MessageHandler(
-                    filters.TEXT & ~filters.COMMAND,
+                    filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"),
                     lambda u, c: u.message.reply_text(
                         "Используй кнопку ниже для отправки местоположения."
                     ),
                 ),
             ],
             AWAITING_TIME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_time),
             ],
             AWAITING_INTERVALS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_intervals),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r"^(🌤 Прогноз|⚙️ Настройки|🕐 Время|📊 Интервалы|📍 Локация)$"), handle_intervals),
             ],
         },
         fallbacks=[
