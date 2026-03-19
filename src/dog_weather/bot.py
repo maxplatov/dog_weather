@@ -218,7 +218,7 @@ async def cmd_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @_safe_handler
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Операция отменена.", reply_markup=ReplyKeyboardRemove()
+        "Операция отменена.", reply_markup=_main_menu()
     )
     return ConversationHandler.END
 
@@ -335,9 +335,9 @@ async def handle_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"✅ Интервалы: <b>{_format_intervals(hours)}</b>\n\n"
         + _format_settings(user)
-        + "\n\n🎉 Всё готово! Прогноз будет приходить по расписанию.\n"
-        "Команды: /settings, /forecast, /time, /intervals, /location",
+        + "\n\n🎉 Всё готово! Прогноз будет приходить по расписанию.",
         parse_mode="HTML",
+        reply_markup=_main_menu(),
     )
     return ConversationHandler.END
 
@@ -350,7 +350,7 @@ async def handle_intervals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db: Database = context.bot_data["db"]
     user = await db.get_user(update.effective_user.id)
-    await update.message.reply_text(_format_settings(user), parse_mode="HTML")
+    await update.message.reply_text(_format_settings(user), parse_mode="HTML", reply_markup=_main_menu())
 
 
 @_safe_handler
@@ -388,6 +388,18 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/help — эта справка",
         parse_mode="HTML",
     )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _main_menu() -> ReplyKeyboardMarkup:
+    kb = [
+        [KeyboardButton("🌤 Прогноз"), KeyboardButton("⚙️ Настройки")],
+        [KeyboardButton("🕐 Время"), KeyboardButton("📊 Интервалы"), KeyboardButton("📍 Локация")],
+    ]
+    return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
 
 # ---------------------------------------------------------------------------
@@ -459,6 +471,9 @@ def create_application(
             CommandHandler("location", cmd_location),
             CommandHandler("time", cmd_time),
             CommandHandler("intervals", cmd_intervals),
+            MessageHandler(filters.Regex(r"^📍 Локация$"), cmd_location),
+            MessageHandler(filters.Regex(r"^🕐 Время$"), cmd_time),
+            MessageHandler(filters.Regex(r"^📊 Интервалы$"), cmd_intervals),
         ],
         states={
             AWAITING_LOCATION: [
@@ -487,5 +502,7 @@ def create_application(
     app.add_handler(CommandHandler("settings", cmd_settings))
     app.add_handler(CommandHandler("forecast", cmd_forecast))
     app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(MessageHandler(filters.Regex(r"^🌤 Прогноз$"), cmd_forecast))
+    app.add_handler(MessageHandler(filters.Regex(r"^⚙️ Настройки$"), cmd_settings))
 
     return app
