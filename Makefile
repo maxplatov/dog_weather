@@ -1,7 +1,8 @@
 .PHONY: build up down logs shell dev install lint
 
 build:
-	DOCKER_BUILDKIT=0 docker compose build --build-arg CACHE_BUST=$(shell git rev-parse HEAD)
+	@chmod +x $(PWD)/docker_config/docker-credential-null-creds
+	PATH=$(PWD)/docker_config:$$PATH DOCKER_BUILDKIT=0 DOCKER_CONFIG=$(PWD)/docker_config docker compose build --build-arg CACHE_BUST=$(shell git rev-parse HEAD)
 
 up:
 	@mkdir -p data
