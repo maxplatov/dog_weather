@@ -9,8 +9,9 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN uv sync --no-dev --no-install-project
 
-# ARG busts the cache for every new git commit so src changes are always picked up
+# RUN that uses ARG busts cache for all subsequent layers (including COPY) in BuildKit
 ARG CACHE_BUST=unknown
+RUN echo "cache bust: $CACHE_BUST"
 COPY src/ src/
 RUN uv pip install --no-cache -e .
 
