@@ -422,7 +422,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/location — обновить местоположение\n"
         "/time — изменить время уведомления\n"
         "/intervals — изменить часовые интервалы\n"
-        "/forecast — получить прогноз прямо сейчас\n"
+        "/forecast — прогноз по расписанию\n"
+        "/weather_now — погода прямо сейчас\n"
         "/settings — показать текущие настройки\n"
         "/cancel — отменить текущую операцию\n"
         "/help — эта справка",
@@ -469,11 +470,12 @@ def create_application(
         await db.init()
 
         await app.bot.set_my_commands([
-            ("forecast",  "Прогноз сейчас"),
-            ("settings",  "Мои настройки"),
-            ("time",      "Изменить время уведомлений"),
-            ("intervals", "Изменить интервалы"),
-            ("location",  "Изменить локацию"),
+            ("forecast",    "Прогноз по расписанию"),
+            ("weather_now", "Погода прямо сейчас"),
+            ("settings",    "Мои настройки"),
+            ("time",        "Изменить время уведомлений"),
+            ("intervals",   "Изменить интервалы"),
+            ("location",    "Изменить локацию"),
         ])
 
         scheduler = create_scheduler()
