@@ -9,7 +9,8 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN uv sync --no-dev --no-install-project
 
-# Copy source and install the local package — this layer always rebuilds when src/ changes
+# ARG busts the cache for every new git commit so src changes are always picked up
+ARG CACHE_BUST=unknown
 COPY src/ src/
 RUN uv pip install --no-cache -e .
 
