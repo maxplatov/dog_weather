@@ -1,7 +1,7 @@
 .PHONY: build up down logs shell dev install lint
 
 build:
-	docker compose build --build-arg CACHE_BUST=$(shell git rev-parse HEAD)
+	DOCKER_BUILDKIT=0 docker compose build --build-arg CACHE_BUST=$(shell git rev-parse HEAD)
 
 up:
 	@mkdir -p data
