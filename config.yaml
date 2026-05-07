@@ -1,0 +1,14 @@
+bot:
+  token: ""           # override via TELEGRAM_BOT_TOKEN env var
+
+weather:
+  request_timeout: 10  # seconds per HTTP request
+  retry_count: 2        # retries on transient errors
+  providers:
+    openweathermap:
+      api_key: ""       # override via OWM_API_KEY env var
+    weatherapi:
+      api_key: ""       # override via WEATHERAPI_KEY env var
+
+database:
+  path: "/data/dog_weather.db"
