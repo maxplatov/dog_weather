@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import Optional
 
 from .base import HourlyWeather, WeatherProvider
 
@@ -63,3 +64,29 @@ class OpenMeteoProvider(WeatherProvider):
         except Exception as exc:
             logger.warning("[%s] parse error: %s", self.name, exc)
             return []
+
+    async def get_sunset(
+        self,
+        lat: float,
+        lon: float,
+        target_date: date,
+        timezone: str,
+    ) -> Optional[str]:
+        date_str = target_date.isoformat()
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "daily": "sunset",
+            "timezone": timezone,
+            "start_date": date_str,
+            "end_date": date_str,
+        }
+        data = await self._fetch(_URL, params=params)
+        if not data:
+            return None
+        try:
+            sunset_iso = data["daily"]["sunset"][0]  # "YYYY-MM-DDTHH:MM"
+            return sunset_iso[11:16]
+        except Exception as exc:
+            logger.warning("[%s] sunset parse error: %s", self.name, exc)
+            return None

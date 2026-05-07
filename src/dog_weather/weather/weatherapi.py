@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime
+from typing import Optional
 
 from dog_weather.config import WeatherConfig
 
@@ -70,3 +71,34 @@ class WeatherAPIProvider(WeatherProvider):
         except Exception as exc:
             logger.warning("[%s] parse error: %s", self.name, exc)
             return []
+
+    async def get_sunset(
+        self,
+        lat: float,
+        lon: float,
+        target_date: date,
+        timezone: str,
+    ) -> Optional[str]:
+        if not self._api_key:
+            return None
+        params = {
+            "key": self._api_key,
+            "q": f"{lat},{lon}",
+            "days": 2,
+            "aqi": "no",
+            "alerts": "no",
+        }
+        data = await self._fetch(_URL, params=params)
+        if not data:
+            return None
+        try:
+            date_str = target_date.isoformat()
+            for day in data.get("forecast", {}).get("forecastday", []):
+                if day.get("date") == date_str:
+                    raw = day.get("astro", {}).get("sunset", "")
+                    if raw:
+                        # WeatherAPI returns "07:05 PM" format
+                        return datetime.strptime(raw.strip(), "%I:%M %p").strftime("%H:%M")
+        except Exception as exc:
+            logger.warning("[%s] sunset parse error: %s", self.name, exc)
+        return None

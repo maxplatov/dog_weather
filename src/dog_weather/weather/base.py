@@ -51,6 +51,16 @@ class WeatherProvider(ABC):
         Implementations must never raise — return an empty list on failure.
         """
 
+    async def get_sunset(
+        self,
+        lat: float,
+        lon: float,
+        target_date: date,
+        timezone: str,
+    ) -> Optional[str]:
+        """Return local sunset time as 'HH:MM', or None if unsupported."""
+        return None
+
     # ------------------------------------------------------------------
     # Protected helpers
     # ------------------------------------------------------------------

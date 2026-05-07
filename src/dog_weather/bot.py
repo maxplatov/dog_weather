@@ -34,7 +34,7 @@ from dog_weather.scheduler import (
 )
 from dog_weather.utils.timezone import get_timezone
 from dog_weather.weather.base import WeatherProvider
-from dog_weather.weather.consensus import build_consensus_message
+from dog_weather.weather.consensus import average_sunset, build_consensus_message
 
 logger = logging.getLogger(__name__)
 
@@ -375,11 +375,15 @@ async def cmd_weather_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(tz)
     hours = [now.hour]
 
-    tasks = [p.get_hourly(user.latitude, user.longitude, hours, now.date(), user.timezone) for p in providers]
-    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+    hourly_tasks = [p.get_hourly(user.latitude, user.longitude, hours, now.date(), user.timezone) for p in providers]
+    sunset_tasks = [p.get_sunset(user.latitude, user.longitude, now.date(), user.timezone) for p in providers]
+    raw_hourly, raw_sunsets = await asyncio.gather(
+        asyncio.gather(*hourly_tasks, return_exceptions=True),
+        asyncio.gather(*sunset_tasks, return_exceptions=True),
+    )
 
     provider_results, failed = {}, []
-    for provider, result in zip(providers, raw_results):
+    for provider, result in zip(providers, raw_hourly):
         if isinstance(result, Exception) or not result:
             failed.append(provider.name)
         else:
@@ -389,7 +393,10 @@ async def cmd_weather_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Все провайдеры погоды недоступны.")
         return
 
-    message = build_consensus_message(hours, provider_results, now.date(), failed)
+    sunsets = [r for r in raw_sunsets if isinstance(r, str)]
+    sunset = average_sunset(sunsets)
+
+    message = build_consensus_message(hours, provider_results, now.date(), failed, sunset=sunset)
     await update.message.reply_text(message, parse_mode="HTML")
 
 

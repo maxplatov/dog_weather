@@ -12,7 +12,7 @@ from telegram.error import TelegramError
 
 from dog_weather.database import Database, UserData
 from dog_weather.weather.base import WeatherProvider
-from dog_weather.weather.consensus import build_consensus_message
+from dog_weather.weather.consensus import average_sunset, build_consensus_message
 
 logger = logging.getLogger(__name__)
 
@@ -110,16 +110,23 @@ async def _send_forecast(
             else now.date()
         )
 
-        # Fetch from all providers concurrently; never let one crash the job
-        tasks = [
+        # Fetch hourly forecasts and sunset times from all providers concurrently
+        hourly_tasks = [
             p.get_hourly(user.latitude, user.longitude, user.intervals, target_date, user.timezone)
             for p in providers
         ]
-        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        sunset_tasks = [
+            p.get_sunset(user.latitude, user.longitude, target_date, user.timezone)
+            for p in providers
+        ]
+        raw_hourly, raw_sunsets = await asyncio.gather(
+            asyncio.gather(*hourly_tasks, return_exceptions=True),
+            asyncio.gather(*sunset_tasks, return_exceptions=True),
+        )
 
         provider_results: dict[str, list] = {}
         failed_providers: list[str] = []
-        for provider, result in zip(providers, raw_results):
+        for provider, result in zip(providers, raw_hourly):
             if isinstance(result, Exception):
                 logger.warning("[%s] raised exception: %s", provider.name, result)
                 failed_providers.append(provider.name)
@@ -132,7 +139,10 @@ async def _send_forecast(
             await _safe_send(bot, telegram_id, "⚠️ Все провайдеры погоды недоступны, попробую позже.")
             return
 
-        message = build_consensus_message(user.intervals, provider_results, target_date, failed_providers)
+        sunsets = [r for r in raw_sunsets if isinstance(r, str)]
+        sunset = average_sunset(sunsets)
+
+        message = build_consensus_message(user.intervals, provider_results, target_date, failed_providers, sunset=sunset)
         await _safe_send(bot, telegram_id, message, parse_mode="HTML")
 
     except Exception as exc:

@@ -17,11 +17,27 @@ def _mean(values: list[float]) -> Optional[float]:
     return sum(non_none) / len(non_none) if non_none else None
 
 
+def average_sunset(times: list[str]) -> Optional[str]:
+    """Average a list of 'HH:MM' sunset times."""
+    minutes = []
+    for t in times:
+        try:
+            h, m = map(int, t.split(":"))
+            minutes.append(h * 60 + m)
+        except Exception:
+            pass
+    if not minutes:
+        return None
+    avg = round(sum(minutes) / len(minutes))
+    return f"{avg // 60:02d}:{avg % 60:02d}"
+
+
 def build_consensus_message(
     hours: list[int],
     provider_results: dict[str, list[HourlyWeather]],
     target_date: date,
     failed_providers: list[str] | None = None,
+    sunset: Optional[str] = None,
 ) -> str:
     """Aggregate provider results and format a Russian-language forecast message."""
     date_str = f"{target_date.day} {_MONTHS_RU[target_date.month]} {target_date.year}"
@@ -68,6 +84,9 @@ def build_consensus_message(
 
     if not any("🌡" in l for l in lines):
         return "⚠️ Не удалось получить данные о погоде ни от одного из провайдеров."
+
+    if sunset:
+        lines.append(f"🌅 Закат: {sunset}\n")
 
     parts = [", ".join(provider_results.keys())]
     if failed_providers:
